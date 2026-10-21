@@ -7,7 +7,6 @@ import { getZip } from '/@/utils/zip-helpers';
 import SaveManager from '/@/services/save-manager.ts';
 import { useXashStore } from '/@/stores/store.ts';
 import { delay } from '/@/utils/helpers.ts';
-import { DEFAULT_GAME_DIR } from '/@/services/save-manager.ts';
 
 // Xash WASM Imports
 // @ts-ignore -- vite url imports
@@ -127,8 +126,9 @@ export const BASE_GAME_SETTINGS = {
     },
     {
       id: 'onSave',
-      match: 'save',
-      callback: () => SaveManager.onSave(), // We set what this does after xash launches.
+      // The engine prints this right before it writes the save file.
+      match: 'Saving game to',
+      callback: () => SaveManager.onSave(),
     },
   ] as ConsoleCallback[],
 };
@@ -693,13 +693,9 @@ class XashLoader {
 
     SaveManager.init(options.xash);
 
-    // Determine the game ID for save transfer
-    const gameId =
-      options.customGameArg === DEFAULT_GAME_DIR
-        ? options.selectedGame.name
-        : options.customGameArg;
-
-    await SaveManager.transferSavesToGame(gameId);
+    // The save manager works out which game the saves belong to, so that a
+    // demo and a folder with the same game share one save list.
+    await SaveManager.transferSavesToGame();
 
     if (options.enableCheats) {
       options.xash.Cmd_ExecuteString('sv_cheats 1');

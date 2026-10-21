@@ -25,6 +25,10 @@
         max="16"
       />
     </label>
+    <p v-if="selectedZipConfig?.bots !== undefined" class="hint">
+      Bots turn the server into a multiplayer game, and the engine refuses to
+      save in a multiplayer game. Set this to 0 to be able to save.
+    </p>
     <label class="volume" for="volume">
       Volume
       <input
@@ -175,6 +179,13 @@
       width: 5rem;
       text-align: center;
     }
+  }
+
+  .hint {
+    margin: 0.25rem 0 0;
+    font-size: 0.8rem;
+    line-height: 1.2;
+    opacity: 0.7;
   }
 
   .start-button {
