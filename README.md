@@ -175,6 +175,18 @@ The download button will save the selected save to your local FS.
 
 If you launch a zipped folder of HL1 or play any of the zipped demos, the save system still works. If you use, for example, `-game bshift` in the launch arguments, that will tell the save system to capture saves under the corresponding game name, so it would be `bshift/save`.
 
+A demo and your own copy of the same game share one save list, so a save you make while playing the HLDM demo is there when you start Half-Life from your own installation.
+
+### Saving needs a single player server
+
+The engine refuses to save while the local server has more than one player slot, and it says so in the console:
+
+```
+Can't save multiplayer games.
+```
+
+That is the engine's rule, not a limitation of the save manager: the demo and your own game files are always served by a local server, and the `BOTS` field raises the player slot count to make room for them. Set `BOTS` to `0` and the server has a single slot again, and saving works — the save is written by the game, picked up by the save manager and put into IndexedDB, and handed back to the game the next time you start it.
+
 ## Other stuff
 
 - Writing `quit` or `exit` in the console _should_ reload the page. If it doesn't, refresh manually.
@@ -186,6 +198,24 @@ If you launch a zipped folder of HL1 or play any of the zipped demos, the save s
 #### Why doesn't multiplayer internet server discovery work?
 
 If you want to play multiplayer over the internet like on Steam you should use this version of [Half-Life: Deathmatch on dos.zone](https://dos.zone/hldm/) for now as it's the closest thing to it. Currently you need to provide the IP address directly.
+
+#### Why is "New game" greyed out in the Counter-Strike menu?
+
+Counter-Strike 1.6 is a multiplayer only game, and it says so in its `gameinfo.txt`:
+
+```
+"type" "multiplayer_only"
+```
+
+The engine reads that and tells the menu library which game mode it is, and the menu greys out the single player entries — `New game`, `Load game` and `Hazard course`. That is what Counter-Strike does on the desktop as well. In the Half-Life menu all of them are available.
+
+#### Why is the Counter-Strike team/character menu missing, and why is the server message of the day shown as HTML source?
+
+Both are the same thing: the Counter-Strike client draws those windows with VGUI, and there is no VGUI support library for the browser.
+
+The engine loads a library called `vgui_support` for that, and the web port has none — the port hands the engine the menu library in its place, which is enough for the menu itself (it brings its own VGUI implementation) but not for the panels the Counter-Strike client creates. The result is a team selection window that never appears — so the player stays a spectator — and HTML that is printed instead of rendered.
+
+Fixing it needs a `vgui_support` build for WebAssembly. The engine has the sources for it and the `internal_vgui_support` option in `gameinfo.txt` exists for games that bring their own UI, but the Counter-Strike client does not, and no published engine package ships such a build. The [reverse engineered Counter-Strike client](https://github.com/Velaron/cs16-client) is the closest thing to a source for it, but it is only built for native platforms at the moment.
 
 #### Why are there no bots in the demos?
 
