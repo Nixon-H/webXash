@@ -132,11 +132,17 @@ The upstream port hardcoded `+volume 0.05`, which is 5% — inaudible in practic
 
 ## Multiplayer
 
-There are two separate things called "multiplayer" here, and they fail for different reasons.
+### The `mp` library is not missing
 
-**The in-game multiplayer menu is missing because of a gap in the platform, not in this port.** The `mp` multiplayer client library — which provides the in-game `MULTIPLAYER` menu and the LAN Game flow — has no WebAssembly build. The engine asks for `dlls/mp_emscripten_wasm32.wasm` at startup and the port has to hand it something else, because Valve's `mp` library was never released as source and the engine repository that would have produced a WASM build of it is gone. There is no front-end change that fixes this: it needs a compiled `mp_emscripten_wasm32.wasm`, and none of the published engine packages ship one. If that ever changes, this section needs revisiting.
+The engine loads a library called `mp` at startup — in Half-Life and Counter-Strike that is the multiplayer/game library, `mp.dll` — and it does so through the same path as every other game library: `dlls/mp_emscripten_wasm32.wasm`. The port has to hand it *something*: if that request is left unanswered the engine aborts and the game never starts.
 
-**Playing with other people over the network does work**, and does not need the `mp` library — it uses the port's own WebRTC transport. There are two ways to play:
+What the port supplies is the open-source replacement for Valve's `mp.dll`, [ReGameDLL_CS](https://github.com/rehlds/ReGameDLL_CS) (MIT), compiled to WebAssembly. That build is what ships as `cs16-client/dlls/cs_emscripten_wasm32.wasm` and what the `dlls/mp_emscripten_wasm32.wasm` request is answered with. Valve's own `mp.dll` is closed source and was never released, so it cannot be compiled for the browser — but the library the engine needs is present.
+
+### Why the in-game multiplayer menu still does not work
+
+The reason is the network transport, not a missing library. The engine's network layer is UDP (`net_chan.c`, `net_ws.c`, `sv_client.c`), and a browser has no UDP sockets. The port therefore replaces that layer with a WebRTC transport: a websocket server does the signalling and the game traffic is carried over an RTCDataChannel. That transport only exists when you hand the port a server address, which is what the `MULTIPLAYER IP` field is for. The in-game `MULTIPLAYER` menu speaks the engine's own protocol and has no way to be pointed at the signalling server, so it cannot use it.
+
+The two ways that do work:
 
 ### Bots (local deathmatch)
 
