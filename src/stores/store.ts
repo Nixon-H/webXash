@@ -4,6 +4,7 @@ import { defineStore } from 'pinia';
 import { type SaveEntry } from '/@/services/save-manager.ts';
 import { DEFAULT_GAME_DIR } from '/@/services/save-manager.ts';
 import { GAME_SETTINGS } from '/@/services/xash-loader.ts';
+import zipList from '/@/config/games';
 
 export const useXashStore = defineStore(
   'xash',
@@ -24,6 +25,9 @@ export const useXashStore = defineStore(
     const fullScreen = ref(false);
     const enableConsole = ref(true);
     const enableCheats = ref(false);
+    // Number of bots to add to the local server. Defaults to the count
+    // declared by the demo that is being played.
+    const botCount = ref(zipList.find((zip) => zip.bots)?.bots ?? 0);
 
     // Methods
 
@@ -97,6 +101,7 @@ export const useXashStore = defineStore(
       fullScreen,
       enableConsole,
       enableCheats,
+      botCount,
       // Computed
       selectedGame,
       customGameArg,
@@ -117,6 +122,7 @@ export const useXashStore = defineStore(
         'fullScreen',
         'enableConsole',
         'enableCheats',
+        'botCount',
       ],
     },
   },

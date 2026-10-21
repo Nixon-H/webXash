@@ -11,6 +11,20 @@
         {{ zip.name }}
       </p>
     </div>
+    <label
+      v-if="selectedZipConfig?.bots !== undefined"
+      class="bot-count"
+      for="bot-count"
+    >
+      Bots
+      <input
+        id="bot-count"
+        v-model.number="bots"
+        type="number"
+        min="0"
+        max="16"
+      />
+    </label>
     <button class="start-button" :disabled="!selectedZip" @click="start">
       Start Demo
     </button>
@@ -21,6 +35,7 @@
   import zipList from '/@/config/games';
   import { useXashStore } from '/@/stores/store';
   import { storeToRefs } from 'pinia';
+  import { computed } from 'vue';
   import setCanvasLoading from '/@/utils/setCanvasLoading.ts';
   import { XashLoader } from '/@/services';
 
@@ -35,12 +50,33 @@
     fullScreen,
     enableConsole,
     enableCheats,
+    botCount,
     loadingProgress,
     customGameArg,
   } = storeToRefs(store);
   const { onStartLoading, onEndLoading, refreshSavesList } = store;
 
   // Methods
+
+  const selectedZipConfig = computed(() =>
+    zipList.find((zip) => zip.packageName === selectedZip.value),
+  );
+
+  // Bots are only added to demos that support them, and the amount the
+  // player asked for is used for those.
+  const bots = computed({
+    get: () => botCount.value,
+    set: (value: number | string) => {
+      const count = Number(value);
+      botCount.value = Number.isFinite(count)
+        ? Math.min(16, Math.max(0, Math.trunc(count)))
+        : 0;
+    },
+  });
+
+  const demoBots = computed(() =>
+    selectedZipConfig.value?.bots !== undefined ? bots.value : 0,
+  );
 
   const start = async () => {
     if (!xashCanvas.value) {
@@ -66,6 +102,8 @@
         selectedZip: selectedZip.value,
         selectedLocalFolder: selectedLocalFolder.value,
         launchOptions: launchOptions.value,
+        startMap: selectedZipConfig.value?.map,
+        bots: demoBots.value,
         fullScreen: fullScreen.value,
         enableConsole: enableConsole.value,
         enableCheats: enableCheats.value,
@@ -85,6 +123,7 @@
         selectedGame: selectedGame.value,
         customGameArg: customGameArg.value,
         enableCheats: enableCheats.value,
+        bots: demoBots.value,
       });
 
       await XashLoader.initConsoleCallbacks(
@@ -100,6 +139,19 @@
 </script>
 
 <style scoped lang="scss">
+  .bot-count {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+
+    input {
+      width: 5rem;
+      text-align: center;
+    }
+  }
+
   .start-button {
     margin-top: 0.5rem;
     text-align: center;

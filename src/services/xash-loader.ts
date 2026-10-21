@@ -72,6 +72,7 @@ export interface PostLoadOptions {
   selectedGame: Enumify<typeof GAME_SETTINGS>;
   customGameArg: string;
   enableCheats?: boolean;
+  bots?: number;
 }
 
 export interface FullStartOptions {
@@ -80,6 +81,8 @@ export interface FullStartOptions {
   selectedZip?: string;
   selectedLocalFolder?: string;
   launchOptions?: string;
+  startMap?: string;
+  bots?: number;
   fullScreen?: boolean;
   enableConsole?: boolean;
   enableCheats?: boolean;
@@ -484,9 +487,15 @@ class XashLoader {
 
   private _buildLaunchArgs(options: FullStartOptions): string[] {
     const baseArgs = options.fullScreen ? FULLSCREEN_ARGS : WINDOW_ARGS;
+    const bots = options.bots ?? 0;
     const args = [
       ...options.selectedGame.launchArgs,
       ...baseArgs,
+      // Bots need free player slots, and the slot count is only picked up
+      // when the server (re)starts, so this has to precede the map.
+      ...(bots > 0 ? ['+maxplayers', String(bots + 1)] : []),
+      // Requested before the user options so a custom "+map" still wins.
+      ...(options.startMap ? ['+map', options.startMap] : []),
       ...(options.launchOptions?.split(' ').filter(Boolean) || []),
     ];
 
@@ -588,6 +597,28 @@ class XashLoader {
 
     if (options.enableCheats) {
       options.xash.Cmd_ExecuteString('sv_cheats 1');
+    }
+
+    if (options.bots) {
+      await this._spawnBots(options.xash, options.bots);
+    }
+  }
+
+  /**
+   * Populates the local server with bots.
+   *
+   * The bot commands are provided by the game library and only become
+   * available once the server is up, so the request has to wait for it.
+   */
+  private async _spawnBots(xash: Xash3D, count: number): Promise<void> {
+    await Promise.race([
+      xash.waitLog('player server started', undefined, 30000).catch(() => undefined),
+      delay(20000),
+    ]);
+
+    for (let i = 0; i < count; i++) {
+      xash.Cmd_ExecuteString('addbot');
+      await delay(500);
     }
   }
 
