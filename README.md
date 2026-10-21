@@ -10,6 +10,30 @@ Please read the [FAQs](https://github.com/x8BitRain/webXash/blob/main/README.md#
 
 ## How to use
 
+There are three ways to get a game running. Pick whichever fits you:
+
+| | What you need | How to start |
+|---|---|---|
+| [Bundled demos](#the-bundled-demos) | Nothing | `HALF-LIFE DEMOS` → pick a demo → `Start Demo` |
+| [Your own game files](#using-your-own-game-files) | A Half-Life / Counter-Strike install | `OPEN FOLDER` → pick the root folder → `Start Game` |
+| [A zip of your game files](#loading-from-a-zip-file) | A zipped copy of your game folder | `OPEN ZIP` → pick the zip → the game launches |
+
+### The bundled demos
+
+Three demos are downloaded on demand, so you can play without owning anything:
+
+| Demo | Size | Contents |
+|---|---|---|
+| HLDM | 85 MB | Half-Life Deathmatch — the `crossfire` map |
+| Uplink | 45 MB | Half-Life: Uplink — `hldemo1` |
+| Day One | 78 MB | Half-Life: Day One — the `c0a0` campaign map |
+
+Select `HALF-LIFE` in the `GAMES` window, pick a demo in the `HALF-LIFE DEMOS` window and press `Start Demo`. The demo is fetched, unpacked into the in-browser filesystem and started on its own map — the engine's default map does not exist in these packages, so the demo declares which one to load.
+
+`HLDM` is a deathmatch map, so it gets a `BOTS` field next to the demo list; see [Bots](#bots) below. The other two demos are single player and do not show it.
+
+### Using your own game files
+
 You must provide your own game files (e.g., from Steam):
 
 ```shell
@@ -18,90 +42,114 @@ steamcmd +force_install_dir ./hl +login your_steam_username +app_update 70 valid
 
 Or from your `valve` or `cstrike` folders located in your steamapps directory.
 
-### Loading from a folder
+#### Loading from a folder
 
-Click the `Open game folder` button and select your Half-Life or Counter-Strike ROOT folder, the folder should always contain a `valve` and or `cstrike` directory, for example:
+Click the `Open game Folder` button and select your Half-Life or Counter-Strike ROOT folder. The folder must contain a `valve` and/or `cstrike` directory, for example:
 
 ```shell
 /Half-Life 1
-├──┬/valve                  
-│  ├───/file1           
-│  └───/file2...  
-└──┬/cstrike                  
-   ├───/file1           
-   └───/file2...  
+├──┬/valve
+│  ├───/file1
+│  └───/file2...
+└──┬/cstrike
+   ├───/file1
+   └───/file2...
 ```
 
-After selecting the folder you'll see a list of game directories to choose from, this basically sets the launch argument `-game bshift`, for example. You can use the `-game` launch arg in the settings box to override this behavior.
+After selecting the folder you'll see a list of game directories to choose from. This sets the launch argument `-game bshift`, for example. You can use the `-game` launch arg in the `LAUNCH OPTIONS` window to override this behavior.
 
 Selecting this folder will persist across visits if you allow permission for the site to access the files. WebXash does not write anything to the selected filesystem folder, it only reads game files and transfers them into a WASM filesystem that lives in memory in the browser during the play session.
 
-### Loading from Zip files
+#### Loading from a zip file
 
-Zip and and copy the `valve` folder from your Half-Life installation into the `public/valve.zip`.
-Note: zip contents should be like this:
+Zip the `valve` and/or `cstrike` folder from your Half-Life installation. The zip must contain those directories at its root, not the files directly:
+
 ```shell
-/valve.zip
-├──┬/valve                  
-│  ├───/file1           
-│  └───/file2...  
-└──┬/cstrike                  
-   ├───/file1           
-   └───/file2...  
+/half-life.zip
+├──┬/valve
+│  ├───/file1
+│  └───/file2...
+└──┬/cstrike
+   ├───/file1
+   └───/file2...
 ```
 
-The click `open zip` to select this zip, if done correctly the game will launch as soon as you've selected the zip.
+Click `Open ZIP` and pick that file. The game launches as soon as the zip has been selected.
 
 ### Running Mods
 
-If you are running a Half-Life mod or expansion like Opposing Force, the `valve` folder should always be present in the folder you select, the mod or expandion should be next to your `valve` folder in the folder you select or compress into a zip. For example:
+If you are running a Half-Life mod or expansion like Opposing Force, the `valve` folder should always be present in the folder you select; the mod or expansion should sit next to your `valve` folder in the folder you select, or be compressed into a zip. For example:
 
 ```shell
 /Half-Life Blue Shift
-├──┬/valve                  
-│  ├───/file1           
-│  └───/file2...  
-└──┬/bshift                  
-   ├───/file1           
-   └───/file2...  
+├──┬/valve
+│  ├───/file1
+│  └───/file2...
+└──┬/bshift
+   ├───/file1
+   └───/file2...
 ```
 
-Before you select the folder you need to specify which game folder to launch using the `LAUNCH OPTIONS` window, in this example, I would run Blue Shift with `-game bshift`
+Before you select the folder you need to specify which game folder to launch using the `LAUNCH OPTIONS` window. In this example, I would run Blue Shift with `-game bshift`.
+
+## Settings
+
+The `LAUNCH OPTIONS` window takes the options that are passed to the engine on startup:
+
+| Option | Effect |
+|---|---|
+| `Fullscreen` | Start in fullscreen instead of windowed |
+| `sv_cheats 1` | Enable `god`, `noclip`, `impulse` and the other cheat commands |
+| `Console` | Open the engine console |
+| text field | Raw engine command line arguments, e.g. `-game bshift` or `+map crossfire` |
+
+Anything you type in the text field is appended after the arguments WebXash generates, so you can always override them — a `+map` of your own wins over the demo's map.
+
+### Bots
+
+The `BOTS` field in the `HALF-LIFE DEMOS` window sets how many bots are added to the local server. Set it to `0` to play alone, or raise it for a busier deathmatch. The value is remembered between visits and applies to the demos that support bots.
+
+Bots are added by the game library itself, which means two things have to happen first: the local server has to be a real multiplayer server with free player slots, and the bot commands only exist once that server is up. WebXash therefore raises `maxplayers` before the map is loaded and adds the bots once the server reports that it has started.
 
 ## Multiplayer
 
-For multiplayer setups you need to use the following servers in docker containers from webxash3d-fwgs:
+The `mp` multiplayer client library — which provides the in-game `MULTIPLAYER` menu and the LAN Game flow — has no WebAssembly build, so the in-game `MULTIPLAYER` → LAN Game flow is not available in this port. There are two ways to play with other people instead.
 
-For HL1DM use [hl-web-server](https://github.com/yohimik/webxash3d-fwgs/tree/main/docker/hl-web-server) 
+### Bots (local deathmatch)
 
-For CS 1.6 use [cs-web-server](https://github.com/yohimik/webxash3d-fwgs/tree/main/docker/cs-web-server)
+Use the `BOTS` field described above. This runs a local deathmatch server with bots on the map.
+
+### A websocket server (LAN and internet)
+
+For real multiplayer you need one of the following servers, running in docker containers from [webxash3d-fwgs](https://github.com/yohimik/webxash3d-fwgs):
+
+- For HL1DM use [hl-web-server](https://github.com/yohimik/webxash3d-fwgs/tree/main/docker/hl-web-server)
+- For CS 1.6 use [cs-web-server](https://github.com/yohimik/webxash3d-fwgs/tree/main/docker/cs-web-server)
 
 These servers work over the internet and over LAN.
 
-Once you have set up the server you can enter the server's <ins>***websocket***</ins> IP and port into the MULTIPLAYER IP input.
+Once you have set up the server you can enter the server's <ins>***websocket***</ins> IP and port into the `MULTIPLAYER IP` input.
 
 The server's websocket address will be `<ip>:27016` by default.
 
-Launch the game and find it in the in-game menu under MULTIPLAYER -> LAN Game.
-
 ## Save manager
 
-The save manager captures saves when they're made in-game and stores them in indexedDB, then categorizes them by the game/mod name it was created under.
+The save manager captures saves when they're made in-game and stores them in IndexedDB, then categorizes them by the game/mod name it was created under.
 
-Saves added via the save button will be categorized under `xash-custom-saves`.
+Saves added via the add button will be categorized under `xash-custom-saves`.
 
 When you launch a game, the saves under the matching game/mod name will be transferred into the game for you to load. Saves under `xash-custom-saves` will also be transferred into any game/mod launched.
 
 The download button will save the selected save to your local FS.
 
-### Using saves with zipped games.
+### Using saves with zipped games
 
-If you launch a zipped folder of HL1 or play any of the zipped demos, the save system still works, if you use, for example, `-game bshift` in the launch arguments, that will tell the save system to capture saves from the corresponding game name, so it would be `bshift/save`.
+If you launch a zipped folder of HL1 or play any of the zipped demos, the save system still works. If you use, for example, `-game bshift` in the launch arguments, that will tell the save system to capture saves under the corresponding game name, so it would be `bshift/save`.
 
 ## Other stuff
 
 - Writing `quit` or `exit` in the console _should_ reload the page. If it doesn't, refresh manually.
-- Pressing Ctrl+W (crouch jumping) tries to close the page on most browsers, the only thing possible to prevent the tab from closing is to show a warning message where you can cancel the close. I recommend playing with fullscreen enabled because as Ctrl+W does not close the tab in fullscreen. 
+- Pressing Ctrl+W (crouch jumping) tries to close the page on most browsers; the only thing possible to prevent the tab from closing is to show a warning message where you can cancel the close. I recommend playing with fullscreen enabled because Ctrl+W does not close the tab in fullscreen.
 - Save manager is disabled when CS 1.6 is selected.
 
 ## FAQs
@@ -110,19 +158,24 @@ If you launch a zipped folder of HL1 or play any of the zipped demos, the save s
 
 If you want to play multiplayer over the internet like on Steam you should use this version of [Half-Life: Deathmatch on dos.zone](https://dos.zone/hldm/) for now as it's the closest thing to it. Currently you need to provide the IP address directly.
 
+#### Why are there no bots in the demos?
+
+The demos are shipped without the `mp` multiplayer client library, so nothing sets up a multiplayer server for you. WebXash does that for the deathmatch demo: it raises `maxplayers` and adds the bots once the server is up. If you are running your own copy of Half-Life and want bots, use the `BOTS` field or start a LAN game on a server that has them.
+
 #### Why doesn't my mod work?
 
 If Xash3d doesn't explicitly support it then it probably won't work, you can see their incompatibility list here: https://github.com/FWGS/xash3d-fwgs/blob/master/Documentation/not-supported-mod-list-and-reasons-why.md
 
 #### Why doesn't it work on mobile?
 
-You'd be better off downloading the xash3D [mobile ports](https://github.com/FWGS/xash3d/releases) rather than using this. You need a keyboard and mouse attached to play this xash port properly.
+You'd be better off downloading the xash3D [mobile ports](https://github.com/FWGS/xash3d-fwgs/releases) rather than using this. You need a keyboard and mouse attached to play this xash port properly.
 
 #### There is a bug in this game port, do I submit a bug report here?
 
 Nope, I'm not the maintainer of this port, I just wrote a frontend for it, please submit issues to the engine port repo instead: https://github.com/yohimik/webxash3d-fwgs
 
 ## Building/developing
+
 Clone the repo:
 
 ```bash
@@ -130,7 +183,20 @@ git clone https://github.com/x8BitRain/webXash.git
 
 cd webXash
 
+npm install
+
 ./setup-xash.sh
 
 npm run dev
+```
+
+`setup-xash.sh` copies the engine, game and demo assets out of `node_modules` into `public/`, where the app expects to find them. Run it again whenever those packages change.
+
+Other scripts:
+
+```bash
+npm run dev      # dev server
+npm run build    # type check and build into dist/
+npm run preview  # serve the production build
+npm run deploy   # build and publish to GitHub Pages
 ```
