@@ -30,7 +30,18 @@ Three demos are downloaded on demand, so you can play without owning anything:
 
 Select `HALF-LIFE` in the `GAMES` window, pick a demo in the `HALF-LIFE DEMOS` window and press `Start Demo`. The demo is fetched, unpacked into the in-browser filesystem and started on its own map — the engine's default map does not exist in these packages, so the demo declares which one to load.
 
-`HLDM` is a deathmatch map, so it gets a `BOTS` field next to the demo list; see [Bots](#bots) below. The other two demos are single player and do not show it.
+`HLDM` is a deathmatch map, so it gets a `BOTS` field next to the demo list; see [Bots](#bots) below. The other two demos are single player and do not show it. The `VOLUME` field is always there; see [Volume](#volume).
+
+#### The trimmed demo packages
+
+The demo packages upstream are cut down to a minimum, and the cut is not consistent: they reference sounds, weapon models and sprites that they do not ship. The engine reports every one of those as `Error: Could not load sound/model ...` on startup, and the packages also carry a `config.cfg` and a `valve.rc` that were written for Counter-Strike, which the engine answers with `Warning: Unknown command ...`.
+
+This fork repairs both without touching the demo packages themselves:
+
+- Each demo has a small companion archive next to it (`hldm-assets.zip`, `uplink-assets.zip`, `dayone-assets.zip`) holding the files that package references but does not ship, copied from the sibling demo packages that still have them. WebXash unpacks it into the filesystem after the demo itself, so the engine finds them.
+- The config files are cleaned up before the game starts: lines with commands this build does not know are dropped, and the missing localization tables are created, so the engine stops complaining about them.
+
+Two messages are left alone, because they are not caused by a missing file: the WebGL renderer's `GL_INVALID_ENUM while uploading *default [2D]`, and Day One's `Couldn't open save data file save/c0a0a.HL1`, which is the engine looking for an autosave that does not exist yet on a first run.
 
 ### Using your own game files
 
@@ -111,9 +122,21 @@ The `BOTS` field in the `HALF-LIFE DEMOS` window sets how many bots are added to
 
 Bots are added by the game library itself, which means two things have to happen first: the local server has to be a real multiplayer server with free player slots, and the bot commands only exist once that server is up. WebXash therefore raises `maxplayers` before the map is loaded and adds the bots once the server reports that it has started.
 
+### Volume
+
+The `VOLUME` field sets the engine's master sound volume, in percent. It is passed to the engine as `+volume` on startup, so it takes effect before the engine opens its audio device, and it is remembered between visits.
+
+The upstream port hardcoded `+volume 0.05`, which is 5% — inaudible in practice. That default is gone, the field above replaces it.
+
+> **Known issue:** with the current engine build the Web Audio output is silent no matter what the volume is. The engine opens its audio device through SDL and the browser's audio callback only ever receives zeroes, so no sample reaches the speakers. That happens inside the compiled WebAssembly engine, not in WebXash, and there is no setting that works around it. The `VOLUME` field is still there for engine builds that do produce sound.
+
 ## Multiplayer
 
-The `mp` multiplayer client library — which provides the in-game `MULTIPLAYER` menu and the LAN Game flow — has no WebAssembly build, so the in-game `MULTIPLAYER` → LAN Game flow is not available in this port. There are two ways to play with other people instead.
+There are two separate things called "multiplayer" here, and they fail for different reasons.
+
+**The in-game multiplayer menu is missing because of a gap in the platform, not in this port.** The `mp` multiplayer client library — which provides the in-game `MULTIPLAYER` menu and the LAN Game flow — has no WebAssembly build. The engine asks for `dlls/mp_emscripten_wasm32.wasm` at startup and the port has to hand it something else, because Valve's `mp` library was never released as source and the engine repository that would have produced a WASM build of it is gone. There is no front-end change that fixes this: it needs a compiled `mp_emscripten_wasm32.wasm`, and none of the published engine packages ship one. If that ever changes, this section needs revisiting.
+
+**Playing with other people over the network does work**, and does not need the `mp` library — it uses the port's own WebRTC transport. There are two ways to play:
 
 ### Bots (local deathmatch)
 
@@ -161,6 +184,12 @@ If you want to play multiplayer over the internet like on Steam you should use t
 #### Why are there no bots in the demos?
 
 The demos are shipped without the `mp` multiplayer client library, so nothing sets up a multiplayer server for you. WebXash does that for the deathmatch demo: it raises `maxplayers` and adds the bots once the server is up. If you are running your own copy of Half-Life and want bots, use the `BOTS` field or start a LAN game on a server that has them.
+
+#### Why is there no sound?
+
+With the current engine build the audio output is silent. The engine opens its audio device through SDL, and the browser's audio callback keeps getting called — hundreds of times per second — but every sample in it is zero. The game is running, the sound files are present and the volume is not the cause: it makes no difference whether the engine is started with `+volume 0.05` or `+volume 1.0`, and neither the browser's autoplay policy nor the `snd_mute_losefocus` cvar changes it. The break is inside the compiled WebAssembly engine, so it cannot be fixed from this front-end.
+
+What this fork does fix is the other half of the problem: the demo packages were missing sound, model and sprite files that the game asks for, so the engine logged an error for each one. Those are restored now — see [The trimmed demo packages](#the-trimmed-demo-packages).
 
 #### Why doesn't my mod work?
 
